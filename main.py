@@ -1,7 +1,8 @@
 # Importamos módulos requeridos
 import os
 import random
-
+import time
+#C:\Users\amaru\proyecto-info073-26s2-g7
 import pygame
 
 # Estados del juego
@@ -29,15 +30,25 @@ VACIO = 0
 OBSTACULO = 1
 JUGADOR = 2
 MANZANA = 3
+MANZANAS_PARA_GANAR = 5
+opciones=["grey","grey10"]
+color=random.choice(opciones)
 
 # Tamaño del tablero
 # Si se cambian estas constantes, se debe modificar la definición
 # del tablero que se encuentra en función reiniciar().
 FILAS = 15
 COLUMNAS = 15
+CANT_OBSTACULOS = 20
 
+BORDE = (
+    [(c,0) for c in range(COLUMNAS)]
+    + [(c,FILAS-1)for c in range(COLUMNAS)]
+    + [(0,f)for f in range(1, FILAS - 1)]
+    +[(COLUMNAS-1,f)for f in range(1, FILAS - 1)]
+)
 
-def aparecer_aleatorio(tablero, id_elem):
+def aparecer_aleatorio(tablero, id_elem, incluir_borde=True):
     """
     Coloca un elemento en una casilla vacía aleatoria del tablero.
 
@@ -65,7 +76,8 @@ def aparecer_aleatorio(tablero, id_elem):
                 # Al utilizar los paréntesis () dentro de la función, lo estaremos
                 # añadiendo como una tupla con la estructura (columna, fila).
                 vacios.append((columna, fila))
-
+    if not incluir_borde:
+        vacios=[pos for pos in vacios if pos not in BORDE]
     # También se puede utilizar comprensión de listas para rellenar el arreglo
     # a la vez que lo recorremos:
     #
@@ -75,7 +87,7 @@ def aparecer_aleatorio(tablero, id_elem):
     #     for columna in range(COLUMNAS)
     #     if tablero[fila][columna] == VACIO
     # ]
-
+    
     # Si no hay casillas vacías, retornamos un valor especial.
     if len(vacios) == 0:
         return -1, -1
@@ -87,7 +99,7 @@ def aparecer_aleatorio(tablero, id_elem):
     # Finalmente, colocamos el elemento al poner su número en la casilla
     # del tablero correspondiente.
     tablero[fila][columna] = id_elem
-
+    
     return columna, fila
 
 
@@ -98,11 +110,12 @@ def poblar_tablero(tablero):
     Parámetros:
         - tablero: El tablero con sus posiciones actuales.
     """
-    aparecer_aleatorio(tablero, OBSTACULO)
+    for i in range ( CANT_OBSTACULOS ) :
+        aparecer_aleatorio ( tablero , OBSTACULO , incluir_borde = False )
     aparecer_aleatorio(tablero, MANZANA)
 
 
-def refrescar_tablero(screen, tablero):
+def refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo):
     """
     Dibuja el estado actual del tablero en la pantalla.
 
@@ -110,11 +123,9 @@ def refrescar_tablero(screen, tablero):
         - screen: La pantalla sobre la cual estamos dibujando.
         - tablero: El tablero con sus posiciones actuales.
     """
-
     # Rellena la pantalla con el color gris, básicamente pintando
     # por encima de lo que estaba anteriormente.
-    screen.fill("gray30")
-
+    screen.fill("grey2")
     # Podemos calcular el tamaño en pixeles que tendrá cada
     # casilla al dividir tanto la altura de la pantalla (screen.get_height())
     # como el ancho (screen.get_width()) por la cantidad de filas y columnas respectivamente.
@@ -124,7 +135,6 @@ def refrescar_tablero(screen, tablero):
     ancho_elem = screen.get_width() / COLUMNAS
     # Como el jugador es un círculo, se necesita el radio.
     radio = ancho_elem / 2
-
     # Posición en eje "y" en unidad de píxeles.
     pos_y = 0
 
@@ -137,30 +147,28 @@ def refrescar_tablero(screen, tablero):
                 # de tamaño (ancho_elem, alto_elem) y color negro.
                 pygame.draw.rect(
                     screen,
-                    "black",
+                    "grey",
                     pygame.Rect((pos_x, pos_y), (ancho_elem, alto_elem)),
-                )
-            elif tablero[i][j] == JUGADOR:
-                # Dibujamos un círculo verde en la posición (pos_x + radio, pos_y + radio),
-                # con un radio definido por la variable "radio" (ancho_elem / 2).
-                pygame.draw.circle(
-                    screen,
-                    "green",
-                    (pos_x + radio, pos_y + radio),
-                    radio,
-                )
-            elif tablero[i][j] == MANZANA:
+                )                    
+            if tablero[i][j] == MANZANA:
+                if manzanas_comidas == MANZANAS_PARA_GANAR-1:
+                    Color="purple"
+                    tamx=0
+                    tamy=0
+                else:
+                    Color="cyan"
+                    tamx=30
+                    tamy=30
                 pygame.draw.rect(
                     screen,
-                    "red",
+                    Color,
                     # Acá reducimos el tamaño del rectángulo
                     # para identificarlo más fácilmente
                     pygame.Rect(
                         (pos_x + 10, pos_y + 10),
-                        (ancho_elem - 20, alto_elem - 20),
+                        (ancho_elem - tamx, alto_elem - tamy),   
                     ),
-                )
-
+                    )
             # Estamos recorriendo los píxeles de la pantalla, por lo que
             # debemos sumar el ancho y altura en pixeles de cada elemento que
             # ya hayamos recorrido para avanzar al siguiente.
@@ -168,10 +176,23 @@ def refrescar_tablero(screen, tablero):
         pos_y += alto_elem
 
     # Refresca el contenido que se ve en pantalla.
+    for col, fila in cuerpo:
+    # Dibujamos un círculo verde en la posición (pos_x + radio, pos_y + radio),
+    # con un radio definido por la variable "radio" (ancho_elem / 2).
+        pygame.draw.circle(
+            screen,
+            "green",
+            (
+                col * ancho_elem + radio,
+                fila * alto_elem + radio,
+            ),
+            radio,
+        )
+        
     pygame.display.flip()
 
 
-def cambiar_direccion(keys, direccion_actual):
+def cambiar_direccion(keys, direccion_actual, manzanas_comidas):
     """
     Cambia la dirección del jugador.
 
@@ -210,7 +231,7 @@ def cambiar_direccion(keys, direccion_actual):
     return direccion_actual
 
 
-def avanzar(tablero, pos_jugador, direccion):
+def avanzar ( tablero , cuerpo , direccion , manzanas_comidas, screen ) :
     """
     Avanza el jugador un paso en la dirección dada.
 
@@ -224,36 +245,48 @@ def avanzar(tablero, pos_jugador, direccion):
         - (resultado, nueva_pos_jugador): Retorna el resultado que se obtiene
             al avanzar (derrota, victoria o "ok" (no cambia de pantalla)) y la nueva posición del jugador.
     """
-
     # Obtenemos los componentes "x" e "y" de cada tupla recibida
     # con información de la dirección y posición del jugador.
     dir_col, dir_fila = direccion
     ind_actual_col, ind_actual_fila = (
-        pos_jugador  # Tupla (columna, fila) que representa los índices en el tablero.
+        cuerpo[0]  # Tupla (columna, fila) que representa los índices en el tablero.
     )
-
-    # Aplicamos la dirección a la posición del jugador.
     ind_nueva_col = ind_actual_col + dir_col
     ind_nueva_fila = ind_actual_fila + dir_fila
+    
+    nueva_cabeza = (ind_nueva_col, ind_nueva_fila)
+    if nueva_cabeza in cuerpo:
+        return "derrota", cuerpo, manzanas_comidas
+    # Aplicamos la dirección a la posición del jugador.
 
     # Verificamos que no haya choque con el borde del tablero.
     if not (0 <= ind_nueva_col < COLUMNAS and 0 <= ind_nueva_fila < FILAS):
-        return "derrota", pos_jugador
+        return "derrota", cuerpo , manzanas_comidas
 
     # Obtenemos el elemento que se encuentre en el tablero en la nueva posición del jugador.
     pos_elem = tablero[ind_nueva_fila][ind_nueva_col]
 
     if pos_elem == OBSTACULO:
-        return "derrota", pos_jugador
+        return "derrota", cuerpo, manzanas_comidas
 
-    if pos_elem == MANZANA:
-        return "victoria", (ind_nueva_col, ind_nueva_fila)
+    if pos_elem == MANZANA :
+        manzanas_comidas += 1
+        tablero[ind_nueva_fila][ind_nueva_col] = VACIO
+        #Mover al jugador a la nueva casilla
+        nueva_cabeza = (ind_nueva_col, ind_nueva_fila)
+        cuerpo.insert(0, nueva_cabeza)
+        # Si llegamos al objetivo , victoria
+        if manzanas_comidas >= MANZANAS_PARA_GANAR:
+            return "victoria", cuerpo , manzanas_comidas
+        # Si no , generar otra manzana y continuar
+        aparecer_aleatorio ( tablero , MANZANA )
+        return "ok", cuerpo , manzanas_comidas
 
     # Movimiento normal, si es que no encontramos manzana ni obstáculo.
-    tablero[ind_actual_fila][ind_actual_col] = VACIO
-    tablero[ind_nueva_fila][ind_nueva_col] = JUGADOR
-
-    return "ok", (ind_nueva_col, ind_nueva_fila)
+    nueva_cabeza = (ind_nueva_col, ind_nueva_fila)
+    cuerpo.insert(0, nueva_cabeza)
+    cuerpo.pop()
+    return "ok", cuerpo , manzanas_comidas
 
 
 def reiniciar():
@@ -303,9 +336,11 @@ def reiniciar():
     poblar_tablero(tablero)
 
     # Colocamos al jugador en una posición aleatoria.
-    pos_jugador = aparecer_aleatorio(tablero, JUGADOR)
-
-    return tablero, pos_jugador
+    pos_jugador = aparecer_aleatorio(tablero, VACIO)
+    
+    cuerpo = [pos_jugador]
+    
+    return tablero, cuerpo
 
 
 def mostrar_pantalla(screen, nombre_archivo):
@@ -342,7 +377,7 @@ def main():
     screen = pygame.display.set_mode((800, 800))
 
     # Establecemos el título de la ventana.
-    pygame.display.set_caption("Juego Básico")
+    pygame.display.set_caption("Snake")
 
     running = True
 
@@ -351,6 +386,7 @@ def main():
     pos_jugador = (0, 0)
     direccion = (0, 0)
     tiempo_ultimo_mov = 0
+    manzanas_comidas = 0
 
     mostrar_pantalla(screen, PANTALLA_INICIO)
 
@@ -367,12 +403,13 @@ def main():
             if evento.type == pygame.KEYDOWN:
                 if estado == ESTADO_INICIO:
                     if evento.key == pygame.K_SPACE:
-                        tablero, pos_jugador = reiniciar()
+                        tablero, cuerpo = reiniciar()
+                        manzanas_comidas = 0
                         direccion = (0, 0)
                         # Obtiene tiempo en milisegundos
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
-                        refrescar_tablero(screen, tablero)
+                        refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo)
                     elif evento.key == pygame.K_i:
                         estado = ESTADO_INSTRUCCIONES
                         mostrar_pantalla(screen, PANTALLA_INSTRUCCIONES)
@@ -383,18 +420,19 @@ def main():
 
                 elif estado in (ESTADO_DERROTA, ESTADO_VICTORIA):
                     if evento.key == pygame.K_r:
-                        tablero, pos_jugador = reiniciar()
+                        tablero, cuerpo = reiniciar()
+                        manzanas_comidas = 0
                         direccion = (0, 0)
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
-                        refrescar_tablero(screen, tablero)
+                        refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo)
 
                     if evento.key == pygame.K_ESCAPE:
                         estado = ESTADO_INICIO
                         mostrar_pantalla(screen, PANTALLA_INICIO)
 
                 elif estado == ESTADO_JUGANDO:
-                    direccion = cambiar_direccion(pygame.key.get_pressed(), direccion)
+                    direccion = cambiar_direccion(pygame.key.get_pressed(), direccion, manzanas_comidas)
 
         if estado == ESTADO_JUGANDO:
             tiempo_actual = pygame.time.get_ticks()  # En milisegundos
@@ -402,8 +440,9 @@ def main():
             # La variable RETRASO hace que si no han pasado esa cantidad de ticks,
             # entonces no se avanzará en el tablero.
             if direccion != (0, 0) and tiempo_actual - tiempo_ultimo_mov >= RETRASO:
-                resultado, pos_jugador = avanzar(tablero, pos_jugador, direccion)
-
+                resultado , cuerpo , manzanas_comidas = avanzar(
+                    tablero , cuerpo , direccion , manzanas_comidas, screen
+                )
                 if resultado == "derrota":
                     estado = ESTADO_DERROTA
                     mostrar_pantalla(screen, PANTALLA_DERROTA)
@@ -412,7 +451,7 @@ def main():
                     mostrar_pantalla(screen, PANTALLA_VICTORIA)
                 else:
                     tiempo_ultimo_mov = tiempo_actual
-                    refrescar_tablero(screen, tablero)
+                    refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo)
 
     pygame.quit()
 
