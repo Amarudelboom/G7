@@ -1,0 +1,12 @@
+He logrado hacer avances, quizás no mucho pues aun me cuesta entender bien el código pero creo que los suficientes como para considerar que hice bien el trabajo
+
+De lo mas importante que implemente al juego:
+-Logre modificar el color de los elementos haciéndolos mas cercanos a lo que la estudiante pidió (manzanas celestes como diamantes, obstáculos grises como piedras y fondo negro como la oscuridad de una cueva)
+
+-Logre implementar que la ultima manzana aparezca morada y mas grande representando un portal de salida que aparece al conseguir todos los diamantes
+
+-Aunque con la ayuda de la IA logre implementar que la serpiente se haga mas grande según cuanto coma, prompt usado: 
+"Como hago que al comer una "manzana" el circulo verde se duplique y dichas copias sigan al cuerpo principal con un pequeño delay como si de una serpiente se tratase"
+y puntuar errores en ciertas líneas para que la IA me ayudase a solucionarlo
+
+Las pantallas no son finales, en la entrega final se verán mejor
