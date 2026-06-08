@@ -152,6 +152,7 @@ def refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo):
                 )                    
             if tablero[i][j] == MANZANA:
                 if manzanas_comidas == MANZANAS_PARA_GANAR-1:
+                    #Si solo queda una manzana, la ultima se genera de un nuevo color y tamaño representando un portal de salida
                     Color="purple"
                     tamx=0
                     tamy=0
@@ -177,11 +178,10 @@ def refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo):
 
     # Refresca el contenido que se ve en pantalla.
     for col, fila in cuerpo:
-    # Dibujamos un círculo verde en la posición (pos_x + radio, pos_y + radio),
-    # con un radio definido por la variable "radio" (ancho_elem / 2).
+    #Cada que se coma una manzana la cantidad de circulos generados crece en 1
         pygame.draw.circle(
             screen,
-            "green",
+            "purple",
             (
                 col * ancho_elem + radio,
                 fila * alto_elem + radio,
@@ -254,6 +254,7 @@ def avanzar ( tablero , cuerpo , direccion , manzanas_comidas, screen ) :
     ind_nueva_col = ind_actual_col + dir_col
     ind_nueva_fila = ind_actual_fila + dir_fila
     
+    #Si la cabeza choca con parte del cuerpo se considera derrota
     nueva_cabeza = (ind_nueva_col, ind_nueva_fila)
     if nueva_cabeza in cuerpo:
         return "derrota", cuerpo, manzanas_comidas
@@ -274,6 +275,7 @@ def avanzar ( tablero , cuerpo , direccion , manzanas_comidas, screen ) :
         tablero[ind_nueva_fila][ind_nueva_col] = VACIO
         #Mover al jugador a la nueva casilla
         nueva_cabeza = (ind_nueva_col, ind_nueva_fila)
+        #Se alarga en 1 al jugador
         cuerpo.insert(0, nueva_cabeza)
         # Si llegamos al objetivo , victoria
         if manzanas_comidas >= MANZANAS_PARA_GANAR:
@@ -286,6 +288,7 @@ def avanzar ( tablero , cuerpo , direccion , manzanas_comidas, screen ) :
     nueva_cabeza = (ind_nueva_col, ind_nueva_fila)
     cuerpo.insert(0, nueva_cabeza)
     cuerpo.pop()
+    #Se va creando y eliminando circulos en base al movimiento, borrando la parte mas lejana y creando una nueva al otro extremo
     return "ok", cuerpo , manzanas_comidas
 
 
@@ -337,7 +340,7 @@ def reiniciar():
 
     # Colocamos al jugador en una posición aleatoria.
     pos_jugador = aparecer_aleatorio(tablero, VACIO)
-    
+    #Se adapta a la composicion de "cuerpo"
     cuerpo = [pos_jugador]
     
     return tablero, cuerpo
