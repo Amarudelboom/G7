@@ -1,5 +1,6 @@
 # Importamos módulos requeridos
 import os
+from random import *
 import random
 import time
 #C:\Users\amaru\proyecto-info073-26s2-g7
@@ -30,7 +31,7 @@ VACIO = 0
 OBSTACULO = 1
 JUGADOR = 2
 MANZANA = 3
-MANZANAS_PARA_GANAR = 5
+MANZANAS_PARA_GANAR = 0
 opciones=["grey","grey10"]
 color=random.choice(opciones)
 
@@ -39,7 +40,11 @@ color=random.choice(opciones)
 # del tablero que se encuentra en función reiniciar().
 FILAS = 15
 COLUMNAS = 15
-CANT_OBSTACULOS = 20
+
+ANCHO_VENTANA = 1040
+ALTO_VENTANA = 800
+LADO_TABLERO = 800
+ANCHO_PANEL = ANCHO_VENTANA - LADO_TABLERO
 
 BORDE = (
     [(c,0) for c in range(COLUMNAS)]
@@ -114,8 +119,22 @@ def poblar_tablero(tablero):
         aparecer_aleatorio ( tablero , OBSTACULO , incluir_borde = False )
     aparecer_aleatorio(tablero, MANZANA)
 
+def dibujar_panel(screen, fuente, largo):
+    panel = pygame . Rect ( LADO_TABLERO , 0 , ANCHO_PANEL , ALTO_VENTANA )
+    pygame . draw . rect ( screen , " gray15 ", panel )
+    # Margen izquierdo del texto dentro del panel
+    x = LADO_TABLERO + 24
+    # Titulo
+    titulo = fuente . render (" LILA ", True , " purple ")
+    screen . blit ( titulo , (x , 30) )
+    # Largo actual de la serpiente
+    largo_txt = fuente . render ( f" Largo : { largo }", True , " cyan ")
+    screen . blit ( largo_txt , (x , 100) )
+    # Meta para ganar ( constante LARGO_VICTORIA )
+    meta_txt = fuente . render ( f" Objetivo : { MANZANAS_PARA_GANAR-1 }", True , "purple" )
+    screen . blit ( meta_txt , (x , 140) )
 
-def refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo):
+def refrescar_tablero(screen, tablero, manzanas_comidas, fuente, cuerpo, cabeza_img, cuerpo_img, cola_img, direccion):
     """
     Dibuja el estado actual del tablero en la pantalla.
 
@@ -125,14 +144,14 @@ def refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo):
     """
     # Rellena la pantalla con el color gris, básicamente pintando
     # por encima de lo que estaba anteriormente.
-    screen.fill("grey2")
+    screen.fill("grey30")
     # Podemos calcular el tamaño en pixeles que tendrá cada
     # casilla al dividir tanto la altura de la pantalla (screen.get_height())
     # como el ancho (screen.get_width()) por la cantidad de filas y columnas respectivamente.
     # Por ejemplo en este caso alto_elem sería 800 / 15 = 53.3, lo que nos indica que la
     # altura de cada elemento es de 53.3 píxeles.
-    alto_elem = screen.get_height() / FILAS
-    ancho_elem = screen.get_width() / COLUMNAS
+    alto_elem = LADO_TABLERO / FILAS
+    ancho_elem = LADO_TABLERO / COLUMNAS
     # Como el jugador es un círculo, se necesita el radio.
     radio = ancho_elem / 2
     # Posición en eje "y" en unidad de píxeles.
@@ -175,20 +194,74 @@ def refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo):
             # ya hayamos recorrido para avanzar al siguiente.
             pos_x += ancho_elem
         pos_y += alto_elem
+    cola_dib = cola_img
+    
+    #Posicionar y rotar imagenes
+    if len(cuerpo) >= 2:
 
+        cola_actual = cuerpo[-1]
+        anterior = cuerpo[-2]
+
+        dx = anterior[0] - cola_actual[0]
+        dy = anterior[1] - cola_actual[1]
+
+        if dy == -1:          # Abajo
+            cola_dib = cola_img
+
+        elif dy == 1:       # Arriba
+            cola_dib = pygame.transform.rotate(cola_img, 180)
+
+        elif dx == -1:        # Derecha
+            cola_dib = pygame.transform.rotate(cola_img, 90)
+
+        elif dx == 1:       # Izquierda
+            cola_dib = pygame.transform.rotate(cola_img, -90)
+            
+    if direccion == (0, -1):      # Arriba
+        cabeza_dib = cabeza_img
+
+    elif direccion == (1, 0):     # Derecha
+        cabeza_dib = pygame.transform.rotate(cabeza_img, -90)
+
+    elif direccion == (0, 1):     # Abajo
+        cabeza_dib = pygame.transform.rotate(cabeza_img, 180)
+
+    elif direccion == (-1, 0):    # Izquierda
+        cabeza_dib = pygame.transform.rotate(cabeza_img, 90)
+    else:
+        cabeza_dib = cabeza_img
     # Refresca el contenido que se ve en pantalla.
-    for col, fila in cuerpo:
+    for i, (col, fila) in enumerate(cuerpo):
     #Cada que se coma una manzana la cantidad de circulos generados crece en 1
-        pygame.draw.circle(
-            screen,
-            "purple",
-            (
-                col * ancho_elem + radio,
-                fila * alto_elem + radio,
-            ),
-            radio,
-        )
-        
+        x = col * ancho_elem
+        y = fila * alto_elem
+
+        if i == 0:
+            screen.blit(cabeza_dib, (x, y))
+
+        elif i == len(cuerpo) - 1:
+            screen.blit(cola_dib, (x, y))
+
+        else:
+
+            anterior = cuerpo[i - 1]
+            siguiente = cuerpo[i + 1]
+
+            dx = abs(anterior[0] - siguiente[0])
+            dy = abs(anterior[1] - siguiente[1])
+
+            if dy == 2:
+                cuerpo_dib = cuerpo_img
+
+            elif dx == 2:
+                cuerpo_dib = pygame.transform.rotate(cuerpo_img, 90)
+
+            else:
+                cuerpo_dib = cuerpo_img
+
+            screen.blit(cuerpo_dib, (x, y))
+            
+    dibujar_panel(screen,fuente,len(cuerpo))
     pygame.display.flip()
 
 
@@ -305,6 +378,13 @@ def reiniciar():
     # Si se modifica constante FILAS o COLUMNAS al inicio, también
     # se debe modificar este arreglo de tablero con los valores correspondientes.
     # Esto puede ser mejorado usando dos bucles "for" anidados o comprensión de listas.
+    global MANZANAS_PARA_GANAR
+    global CANT_OBSTACULOS
+    
+    CANT_OBSTACULOS= random.randint(10,30)
+
+    MANZANAS_PARA_GANAR = random.randint(5, 10)
+    
     tablero = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -375,12 +455,30 @@ def mostrar_pantalla(screen, nombre_archivo):
 
 def main():
     pygame.init()
+    pygame.mixer.init() 
+    DIR_SOUNDS = os.path.join(os.path.dirname(__file__), "sounds")
+
+    pygame.mixer.music.load(
+        os.path.join(DIR_SOUNDS, "fondo.mp3.mp3")
+    ) 
+    pygame.mixer.music.play(-1)
+
 
     # Establecemos la resolución de la pantalla.
-    screen = pygame.display.set_mode((800, 800))
+    screen = pygame.display.set_mode((ANCHO_VENTANA, ALTO_VENTANA))
 
     # Establecemos el título de la ventana.
     pygame.display.set_caption("Snake")
+    cabeza_img = pygame.image.load("C:/Users/amaru/G7/sprites/cabeza.png").convert_alpha()
+    cuerpo_img = pygame.image.load("C:/Users/amaru/G7/sprites/cuerpo.png").convert_alpha()
+    cola_img = pygame.image.load("C:/Users/amaru/G7/sprites/cola.png").convert_alpha()
+    
+    tam = (LADO_TABLERO // COLUMNAS, LADO_TABLERO // FILAS)
+
+    cabeza_img = pygame.transform.scale(cabeza_img, tam)
+    cuerpo_img = pygame.transform.scale(cuerpo_img, tam)
+    cola_img = pygame.transform.scale(cola_img, tam)
+    fuente = pygame.font.Font(None, 36)
 
     running = True
 
@@ -412,7 +510,7 @@ def main():
                         # Obtiene tiempo en milisegundos
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
-                        refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo)
+                        refrescar_tablero(screen, tablero, manzanas_comidas, fuente, cuerpo, cabeza_img, cuerpo_img, cola_img, direccion)
                     elif evento.key == pygame.K_i:
                         estado = ESTADO_INSTRUCCIONES
                         mostrar_pantalla(screen, PANTALLA_INSTRUCCIONES)
@@ -428,7 +526,7 @@ def main():
                         direccion = (0, 0)
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
-                        refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo)
+                        refrescar_tablero(screen, tablero, manzanas_comidas, fuente, cuerpo, cabeza_img, cuerpo_img, cola_img, direccion)
 
                     if evento.key == pygame.K_ESCAPE:
                         estado = ESTADO_INICIO
@@ -454,7 +552,7 @@ def main():
                     mostrar_pantalla(screen, PANTALLA_VICTORIA)
                 else:
                     tiempo_ultimo_mov = tiempo_actual
-                    refrescar_tablero(screen, tablero, manzanas_comidas, cuerpo)
+                    refrescar_tablero(screen, tablero, manzanas_comidas, fuente, cuerpo, cabeza_img, cuerpo_img, cola_img, direccion)
 
     pygame.quit()
 
